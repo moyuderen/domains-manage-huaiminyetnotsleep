@@ -1,6 +1,7 @@
 'use client'
 
-import { Activity, CalendarClock, CircleAlert, Globe, Server, ServerCog, ServerOff, Tags, User, UserCheck, UserX, UserPlus } from 'lucide-react'
+import { Activity, CalendarClock, CircleAlert, Globe, Server, ServerCog, ServerOff, Tags, User, UserCheck, UserX, UserPlus, type LucideIcon } from 'lucide-react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 import { Card, CardContent } from '@/components/ui/card'
@@ -12,6 +13,17 @@ type DomainStatistics = {
   newThisWeek: number
 }
 
+type DomainStatItem = {
+  key: keyof DomainStatistics
+  label: string
+  valueClassName: string
+  iconClassName: string
+  toneClassName: string
+  icon: LucideIcon
+  // 设置后整张卡片可点击，跳转到域名管理页对应的筛选结果
+  href?: string
+}
+
 type AccountStatistics = {
   total: number
   active: number
@@ -19,12 +31,12 @@ type AccountStatistics = {
   newThisWeek: number
 }
 
-const domainItems = [
+const domainItems: DomainStatItem[] = [
   { key: 'total', label: '总域名数', valueClassName: 'text-foreground', iconClassName: 'text-foreground', toneClassName: 'bg-muted/70 text-foreground border-border/80', icon: Globe },
-  { key: 'expiring', label: '即将到期', valueClassName: 'text-warning-foreground dark:text-warning', iconClassName: 'text-warning-foreground dark:text-warning', toneClassName: 'bg-warning-muted text-warning-foreground border-warning/25 dark:text-warning', icon: CalendarClock },
-  { key: 'expired', label: '已过期', valueClassName: 'text-destructive', iconClassName: 'text-destructive', toneClassName: 'bg-destructive/10 text-destructive border-destructive/20', icon: CircleAlert },
+  { key: 'expiring', label: '即将到期', href: '/domains?status=expiring', valueClassName: 'text-warning-foreground dark:text-warning', iconClassName: 'text-warning-foreground dark:text-warning', toneClassName: 'bg-warning-muted text-warning-foreground border-warning/25 dark:text-warning', icon: CalendarClock },
+  { key: 'expired', label: '已过期', href: '/domains?status=expired', valueClassName: 'text-destructive', iconClassName: 'text-destructive', toneClassName: 'bg-destructive/10 text-destructive border-destructive/20', icon: CircleAlert },
   { key: 'newThisWeek', label: '本周新增', valueClassName: 'text-foreground', iconClassName: 'text-accent-brand', toneClassName: 'bg-accent-brand-muted text-accent-brand border-accent-brand/25', icon: Activity },
-] as const
+]
 
 const accountItems = [
   { key: 'total', label: '总账户数', valueClassName: 'text-foreground', iconClassName: 'text-foreground', toneClassName: 'bg-muted/70 text-foreground border-border/80', icon: User },
@@ -39,21 +51,29 @@ export function DomainStatsCards({ statistics }: { statistics: DomainStatistics 
       {domainItems.map((item, index) => {
         const Icon = item.icon
 
+        const card = (
+          <Card className="transition-all duration-200 hover:shadow-md">
+            <CardContent>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-muted-foreground text-sm font-medium">{item.label}</div>
+                  <div className={`mt-3 text-2xl font-semibold tracking-tight md:text-3xl ${item.valueClassName}`}>{statistics[item.key]}</div>
+                </div>
+                <div className={`${item.toneClassName} flex h-11 w-11 items-center justify-center rounded-2xl border shadow-xs`}>
+                  <Icon size={20} className={item.iconClassName} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )
+
         return (
           <motion.div key={item.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-            <Card className="transition-all duration-200 hover:shadow-md">
-              <CardContent>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-muted-foreground text-sm font-medium">{item.label}</div>
-                    <div className={`mt-3 text-2xl font-semibold tracking-tight md:text-3xl ${item.valueClassName}`}>{statistics[item.key]}</div>
-                  </div>
-                  <div className={`${item.toneClassName} flex h-11 w-11 items-center justify-center rounded-2xl border shadow-xs`}>
-                    <Icon size={20} className={item.iconClassName} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {item.href ? (
+              <Link href={item.href} className="block rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                {card}
+              </Link>
+            ) : card}
           </motion.div>
         )
       })}
