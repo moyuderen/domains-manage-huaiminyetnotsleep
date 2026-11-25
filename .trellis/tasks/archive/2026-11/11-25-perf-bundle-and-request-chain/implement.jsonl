@@ -1,0 +1,9 @@
+{"file": ".trellis/workflow.md", "reason": "Project workflow and conventions"}
+{"file": ".trellis/spec/backend/index.md", "reason": "Backend development guide"}
+{"file": ".trellis/spec/frontend/index.md", "reason": "Frontend development guide"}
+{"file": ".trellis/spec/frontend/api-integration.md", "reason": "Server Actions / lib/data 数据流、域名保存联动与 revalidate 约束（批次 B）"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "列表页派生状态、URL 状态与刷新模式（批次 C）"}
+{"file": ".trellis/spec/frontend/components.md", "reason": "Server/Client 组件边界与表单/对话框模式（批次 A/C）"}
+{"file": ".trellis/spec/frontend/hooks.md", "reason": "新增 hook 的写法约定"}
+{"file": ".trellis/spec/backend/database.md", "reason": "Supabase 查询模式与 server/client 边界安全规则"}
+{"file": ".trellis/spec/shared/code-quality.md", "reason": "强制代码规则"}

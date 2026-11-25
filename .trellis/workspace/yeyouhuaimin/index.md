@@ -8,8 +8,8 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 26
-- **Last Active**: 2026-05-20
+- **Total Sessions**: 27
+- **Last Active**: 2026-11-25
 <!-- @@@/auto:current-status -->
 
 ---
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~869 | Active |
+| `journal-1.md` | ~902 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 27 | 2026-11-25 | 性能优化与三角色验收 | `2046bc1` | `main` |
 | 26 | 2026-05-20 | 实现域名后缀筛选与 dashboard 图表 | `3b628e8` | `main` |
 | 25 | 2026-05-08 | 编写后台功能使用文档 + 截图 + 推广文案 + UI修复 | `1420a28` | `main` |
 | 24 | 2026-05-06 | SearchableSelect 可搜索下拉组件 | `c349143` | `main` |

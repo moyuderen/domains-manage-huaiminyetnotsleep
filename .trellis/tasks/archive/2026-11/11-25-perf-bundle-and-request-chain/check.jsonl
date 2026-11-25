@@ -1,0 +1,8 @@
+{"file": ".claude/commands/trellis/finish-work.md", "reason": "Finish work checklist"}
+{"file": ".claude/skills/trellis-check/SKILL.md", "reason": "Code quality check skill（模板里的 check.md 在本仓库不存在）"}
+{"file": ".trellis/spec/frontend/api-integration.md", "reason": "验收 Server Action 结构与缓存刷新是否保持"}
+{"file": ".trellis/spec/frontend/state-management.md", "reason": "验收列表状态与刷新行为"}
+{"file": ".trellis/spec/frontend/quality.md", "reason": "前端提交前检查清单"}
+{"file": ".trellis/spec/backend/quality.md", "reason": "后端提交前检查清单"}
+{"file": ".trellis/spec/backend/database.md", "reason": "验收 Supabase 访问仅限数据层、service-role 不进客户端"}
+{"file": ".trellis/spec/shared/code-quality.md", "reason": "验收强制代码规则"}

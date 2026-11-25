@@ -867,3 +867,36 @@ Added IP, OS, and browser details to manual notifications, exposed source contex
 ### Next Steps
 
 - None - task complete
+
+
+## Session 27: 性能优化与三角色验收
+
+**Date**: 2026-11-25
+**Task**: 性能优化与三角色验收
+**Branch**: `main`
+
+### Summary
+
+减少首屏 JS 和重复请求；完成沙箱浏览器回归，28 项测试通过；未连接真实 Supabase。
+
+### Main Changes
+
+(Add details)
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `2046bc1` | (see git log) |
+
+### Testing
+
+- [OK] (Add test results)
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- None - task complete

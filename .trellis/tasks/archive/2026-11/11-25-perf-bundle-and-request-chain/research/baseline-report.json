@@ -1,0 +1,362 @@
+{
+  "$comment": "验收运行记录。基线 = 提交 97d8af4；候选 = 2026-11-25 12:18:47 CST 的工作树。每条结果带 verdict：pass = 实测符合预期；note = 实测，需要知情但不构成阻断；unverified = 没跑，不计为通过；notTestable = 当前环境无法验证。",
+  "conclusion": "在已实测的范围内，未发现需要返修的阻断。未验证项见 notVerified，不可测项见 notTestable，不能当作已通过。",
+  "baseline": {
+    "commit": "97d8af48927ed77aad8c44a1ebe51cf87ef8422e",
+    "source": "git archive 97d8af4（只读取提交对象，不经过工作树，不改变 git 状态）",
+    "sandbox": "/tmp/dm-accept-sandbox",
+    "isolatedAt": "2026-11-25 11:58:55 CST",
+    "verifiedAt": [
+      "2026-11-25 12:02:04 CST",
+      "2026-11-25 12:13:53 CST（sandbox.sh snapshot 重跑后，幂等）"
+    ],
+    "verificationMethod": "把同一提交重新导出为对照树，diff -rq 整树比较，排除 node_modules / .next / .env* / .dm-sandbox-source",
+    "verificationResult": "退出码 0，差异 0 行",
+    "filesInSandbox": "433 个普通文件 + 1 个符号链接（.claude/skills/shadcn），与提交一致",
+    "notCopiedIntoSandbox": [
+      ".env.example（提交里唯一的 .env* 文件，按规则不进沙箱）"
+    ],
+    "worktreeStateAtIsolation": "仅 next-env.d.ts 已修改、任务目录未跟踪，没有源码改动",
+    "detail": "/tmp/dm-accept-artifacts/verification/snapshot-verification.txt"
+  },
+  "candidate": {
+    "source": "工作树（含未提交改动），sandbox.sh sync",
+    "sandbox": "/tmp/dm-accept-candidate-sandbox",
+    "syncedAt": "2026-11-25 12:18:47 CST",
+    "head": "97d8af48927ed77aad8c44a1ebe51cf87ef8422e",
+    "uncommittedChanges": "43 处 = 34 个已修改的跟踪文件 + 8 个未跟踪文件/目录",
+    "trackedDiffSha256Prefix": "138d48eff5f765be",
+    "untrackedListSha256Prefix": "aaf362ad11fd254d",
+    "consistentDuringSync": true,
+    "recheckedAt": "2026-11-25 12:20:40 CST，与当时工作树零差异",
+    "untrackedFiles": [
+      "__tests__/actions/",
+      "__tests__/components/account-interactions.test.tsx",
+      "__tests__/components/responsive-list.test.tsx",
+      "__tests__/lib/activity-log-summary.test.ts",
+      "hooks/useDesktopList.ts",
+      "hooks/useFormDialog.ts",
+      "lib/account-display.ts",
+      "lib/utils/email.ts"
+    ],
+    "detail": "/tmp/dm-accept-artifacts/candidate/candidate-snapshot.txt"
+  },
+  "environment": {
+    "browser": "ZCode In-app Browser（browser-use:control-browser，唯一可用后端 iab）",
+    "viewport": "desktop 1440×900",
+    "theme": "关键场景显式切换为浅色（localStorage theme-mode=light）；01-login.png 是系统深色下的自动主题",
+    "urls": {
+      "baseline": "http://localhost:3457",
+      "candidate": "http://localhost:3460"
+    },
+    "dataMode": "mock（Supabase 变量置空），登录秘钥 smoke-test-key",
+    "facts": [
+      "浏览器里 localhost 的 cookie 不区分端口共享：其他端口会话的登录、登出或写入同名 cookie，都会改变本会话的登录状态。本会话 12:26 被登出一次；为补测“复制域名”在 12:3x 重新登录过一次，此后停止。这类登出不是应用回归。",
+      "[::1] 不可用：/ _next/ 资源 20 个全部 200、传输字节数与 localhost 相同（4,741,026），但 React 始终没有挂载到页面（45 秒内表单上没有挂载属性），点击提交变成原生表单提交。服务端日志因此出现一条 Blocked cross-origin request ... from \"[::1]\"，来源是本次探测，与候选代码无关。",
+      "内置浏览器的系统配色是深色，应用的“自动”主题会显示为深色。",
+      "dev 模式首次访问路由要现场编译。登录后第一次读看板时，统计读到 7 张卡片而页面标题尚未出现，右下角显示 Compiling；等标题出现后是 12 张卡片。只有后者被采信。",
+      "截图左下角的 N 是 Next dev 的开发工具入口，dev 模式固有。"
+    ]
+  },
+  "sandboxSh": {
+    "path": ".trellis/tasks/archive/2026-11/11-25-perf-bundle-and-request-chain/research/sandbox.sh",
+    "env": {
+      "DM_SANDBOX": "默认 /tmp/dm-accept-sandbox",
+      "DM_PORT": "默认 3457",
+      "DM_REPO": "默认按脚本位置推导"
+    },
+    "subcommands": {
+      "snapshot <提交>": "已运行（snapshot 97d8af4，两次，结果一致）",
+      "sync": "已运行（把工作树同步到候选沙箱，两次）",
+      "dev": "已运行（3457 与 3460，均正常启动；只监听 localhost）",
+      "typecheck": "已运行（候选沙箱，退出码 0）",
+      "test": "已运行（候选沙箱，28/28 通过）",
+      "measure": "只验证了调用链：没有生产构建时给出提示并以 2 退出。没有执行真实测量",
+      "build": "未运行。按协调者指示不重跑第三套构建，体积结果引用主会话、开发者与总验收者各自的构建"
+    },
+    "guards": [
+      "拒绝把仓库目录、仓库内部目录、名字不含 sandbox 的目录、层级过浅的目录当作沙箱；检查在创建任何目录之前完成。",
+      "--delete 只作用于全新目录、带来源标记的沙箱，或能确认是本项目副本的目录。",
+      "写入 <沙箱>/.dm-sandbox-source 记录当前沙箱来自哪个提交或哪次工作树同步。",
+      "兼容 macOS 自带的 bash 3.2：变量一律写成 ${var}。"
+    ]
+  },
+  "static": [
+    {
+      "id": "typecheck",
+      "item": "类型检查 npx tsc --noEmit",
+      "at": "2026-11-25 12:25:37–12:25:49 CST",
+      "result": "退出码 0",
+      "verdict": "pass",
+      "evidence": "/tmp/dm-accept-artifacts/candidate/static-typecheck-test.log"
+    },
+    {
+      "id": "test",
+      "item": "单元测试 npm test",
+      "at": "2026-11-25 12:25:49–12:26:00 CST",
+      "result": "7 个文件、28 个用例全部通过。其中新增：write-audit 5、activity-log-summary 1、account-interactions 3、responsive-list 1；原有 18",
+      "verdict": "pass",
+      "evidence": "/tmp/dm-accept-artifacts/candidate/static-typecheck-test.log"
+    },
+    {
+      "id": "bundle",
+      "item": "首屏 JS 体积（build + measure）",
+      "result": "本会话未运行",
+      "verdict": "unverified",
+      "evidence": null
+    }
+  ],
+  "gui": [
+    {
+      "id": "login",
+      "page": "/login → /dashboard",
+      "item": "登录",
+      "candidate": "输入 smoke-test-key 后点“进入管理后台”，跳转 /dashboard，客户端接管页面",
+      "verdict": "pass",
+      "shot": "candidate/desktop/01-login.png"
+    },
+    {
+      "id": "dashboard-domains",
+      "page": "/dashboard",
+      "item": "看板·域名监控标签",
+      "candidate": "h1 监测看板；总域名数 4、即将到期 0、已过期 3、本周新增 0；近期风险提醒“暂无 7 天内到期域名”；面板内卡片 12、图表区 7",
+      "verdict": "pass",
+      "shot": "candidate/desktop/02-dashboard-domains.png"
+    },
+    {
+      "id": "dashboard-sites",
+      "page": "/dashboard?tab=sites",
+      "item": "看板·站点监控标签",
+      "candidate": "总站点数 8、启用站点 7、停用站点 1、站点分类 4；站点账号分布图；面板内卡片 5",
+      "verdict": "pass",
+      "shot": "candidate/desktop/03-dashboard-sites.png"
+    },
+    {
+      "id": "dashboard-accounts",
+      "page": "/dashboard?tab=accounts",
+      "item": "看板·账户监控标签",
+      "candidate": "总账户数 8、启用账户 7、停用账户 1、本周新增 0；邮箱提供商分布、账户复用情况；面板内卡片 8",
+      "verdict": "pass",
+      "shot": "candidate/desktop/04-dashboard-accounts.png"
+    },
+    {
+      "id": "a2-animation",
+      "page": "/dashboard 三个标签",
+      "item": "A2 统计卡片入场动画",
+      "candidate": "CSS 动画 dashboard-card-enter，作用在包着卡片的 div 上；关键帧 透明度 0→1、translateY(12px)→translateY(0px)；时长 300ms。三个标签切换时都采样到淡入：35 帧中 10 帧透明度小于 1，首帧约 0.26、下移约 8.9px，末帧约 0.98、下移约 0.25px",
+      "verdict": "pass",
+      "notChecked": "逐张 50ms 延迟、缓动曲线、无布局跳动的像素比对"
+    },
+    {
+      "id": "sites-page",
+      "page": "/sites",
+      "item": "站点管理页（卡片视图）",
+      "candidate": "h1 站点管理；当前 8 / 共 8 个站点；分类卡片 4（云服务 3、注册商 3、CDN 1、DNS 1）；卡片视图为选中状态",
+      "baseline": null,
+      "verdict": "pass",
+      "shot": "candidate/desktop/05-sites-card.png"
+    },
+    {
+      "id": "sites-dialog-add",
+      "page": "/sites",
+      "item": "添加站点弹窗：打开 / 取消 / 重开 / 焦点",
+      "candidate": "首次打开 522ms，标题“添加站点”，6 个字段全空；点取消后弹窗移除，焦点回到“添加站点”按钮；重开 180ms，字段仍全空；用右上角关闭后弹窗移除，焦点同样归还",
+      "verdict": "pass",
+      "shot": "candidate/desktop/06-sites-dialog-add.png"
+    },
+    {
+      "id": "sites-dialog-edit",
+      "page": "/sites",
+      "item": "编辑站点弹窗：回填 / 取消 / 重开 / 焦点",
+      "candidate": "首次打开 130ms，标题“编辑站点”，回填 Cloudflare / CDN / https://dash.cloudflare.com/ / Cloudflare DNS 解析与 CDN；取消后弹窗移除，焦点回到“编辑站点 Cloudflare”按钮；重开 152ms，回填仍在；再取消，焦点归还",
+      "verdict": "pass",
+      "shot": "candidate/desktop/07-sites-dialog-edit.png"
+    },
+    {
+      "id": "domain-detail",
+      "page": "/domains/mock-domain-1",
+      "item": "域名详情页",
+      "candidate": "h1 example.com（已过期 198 天）；注册站点 Namecheap、账号 domains@example.com、DNS 站点 Cloudflare、DNS 账号 ops@example.com；子域名 2 行（www、api）；卡片 2、表格行 2，全部可见",
+      "baseline": "卡片 2、表格行 2，全部可见（与候选相同；PRD 说明子域名管理本次不改）",
+      "verdict": "pass",
+      "shot": "candidate/desktop/08-domain-detail.png"
+    },
+    {
+      "id": "subdomain-dialog-add",
+      "page": "/domains/mock-domain-1",
+      "item": "新增子域名弹窗：打开 / 取消 / 重开 / 焦点",
+      "candidate": "首次打开 616ms，标题“新增子域名”，5 个字段全空；取消后弹窗移除，焦点回到“新增子域名”按钮；重开 96ms，字段仍全空；右上角关闭后焦点归还",
+      "verdict": "pass",
+      "shot": "candidate/desktop/09-subdomain-dialog-add.png"
+    },
+    {
+      "id": "subdomain-dialog-edit",
+      "page": "/domains/mock-domain-1",
+      "item": "编辑子域名弹窗：回填 / 取消 / 重开 / 焦点",
+      "candidate": "首次打开 110ms，标题“编辑子域名”，回填 www / 76.76.21.21 / 官网主站入口；取消后弹窗移除，焦点回到 www 行的编辑按钮；重开 91ms，回填仍在；再取消，焦点归还",
+      "verdict": "pass",
+      "shot": "candidate/desktop/10-subdomain-dialog-edit.png"
+    },
+    {
+      "id": "accounts-page",
+      "page": "/accounts",
+      "item": "账号管理页",
+      "candidate": "h1 账号管理；表格 8 行可见；显示第 1-8 条，共 8 条；DOM 卡片数 1",
+      "baseline": "DOM 卡片数 2，其中 1 张可见（被隐藏的移动列表仍在 DOM 里）",
+      "verdict": "pass",
+      "shot": "candidate/desktop/11-accounts.png"
+    },
+    {
+      "id": "accounts-dialog-add",
+      "page": "/accounts",
+      "item": "添加账号弹窗：打开 / 取消 / 重开 / 焦点",
+      "candidate": "首次打开 521ms，标题“添加账号”，默认值：账号标识空、账号类型 Google 邮箱、密码库位置 Bitwarden、“启用账号”已勾选；取消后弹窗移除，焦点回到“添加账号”按钮；重开 164ms，默认值不变；右上角关闭后焦点归还",
+      "verdict": "pass",
+      "shot": "candidate/desktop/12-accounts-dialog-add.png"
+    },
+    {
+      "id": "accounts-dialog-edit",
+      "page": "/accounts",
+      "item": "编辑账号弹窗：回填 / 取消 / 重开 / 焦点",
+      "candidate": "首次打开 106ms，标题“编辑账号”，回填 domains@example.com / 域名邮箱 / 已在密码库记录 / Bitwarden / 主要用于通用域名注册 / 启用；取消后弹窗移除，焦点回到该行的编辑按钮；重开 160ms，回填仍在；再取消，焦点归还",
+      "verdict": "pass",
+      "shot": "candidate/desktop/13-accounts-dialog-edit.png"
+    },
+    {
+      "id": "accounts-dialog-manage-sites",
+      "page": "/accounts",
+      "item": "管理站点弹窗：打开 / 取消 / 焦点",
+      "candidate": "首次打开 95ms，标题“管理注册站点”，显示当前站点 Namecheap 及备注“通用域名注册”；取消后弹窗移除；焦点落在页面上，没有回到按钮（复测两轮，关闭后立即读与等 500ms 读结果相同）",
+      "baseline": "同样落在页面上",
+      "verdict": "note",
+      "note": "与基线一致，不是回归。这个弹窗不在四类表单弹窗之内，没有接入按需加载逻辑",
+      "shot": "candidate/desktop/14-accounts-dialog-manage-sites.png"
+    },
+    {
+      "id": "focus-restore",
+      "page": "/accounts",
+      "item": "表单弹窗关闭后的焦点位置（基线对照）",
+      "candidate": "添加账号、编辑账号取消后，焦点回到触发按钮",
+      "baseline": "添加账号、编辑账号、管理站点取消后，焦点都落在页面上",
+      "verdict": "note",
+      "note": "候选对受控表单多做了焦点归还。协调者确认这是批准计划的目标，无需再测"
+    },
+    {
+      "id": "c1-cancel-no-refresh",
+      "page": "/accounts",
+      "item": "C1 取消表单不触发刷新（服务端日志）",
+      "candidate": "三个弹窗整套打开 / 取消 / 重开期间，服务端日志没有新增行；对 /accounts 的请求共 1 次（仅页面导航）",
+      "baseline": "同一套操作，对 /accounts 的请求共 3 次：1 次页面导航 + 2 次关闭表单触发的刷新（添加账号、编辑账号各一次；管理站点关闭不刷新）",
+      "verdict": "pass",
+      "evidence": [
+        "/tmp/dm-accept-artifacts/baseline-server.log",
+        "/tmp/dm-accept-artifacts/candidate/candidate-server.log"
+      ]
+    },
+    {
+      "id": "c2-domains-desktop",
+      "page": "/domains",
+      "item": "C2 桌面端 DOM 里只保留一套列表（域名页）",
+      "candidate": "DOM 卡片数 1，表格 4 行可见",
+      "baseline": "DOM 卡片数 2，其中 1 张可见；表格 4 行可见",
+      "verdict": "pass"
+    },
+    {
+      "id": "c2-accounts-desktop",
+      "page": "/accounts",
+      "item": "C2 桌面端 DOM 里只保留一套列表（账号页）",
+      "candidate": "DOM 卡片数 1，表格 8 行可见",
+      "baseline": "DOM 卡片数 2，其中 1 张可见；表格 8 行可见",
+      "verdict": "pass"
+    },
+    {
+      "id": "domains-page",
+      "page": "/domains",
+      "item": "域名管理页",
+      "candidate": "h1 域名管理；4 行：campaign.cn（正常）、example.com（已过期）、mail-demo.net（已过期）、legacy-service.org（已过期）；显示第 1-4 条，共 4 条",
+      "baseline": "同样的 4 行，顺序相同",
+      "verdict": "pass"
+    },
+    {
+      "id": "domains-dialog-clone",
+      "page": "/domains",
+      "item": "更多操作 → 复制域名：回填 / 取消 / 焦点",
+      "candidate": "菜单项：查看详情、复制域名、删除。首次打开 688ms，标题“复制域名”，12 个字段全部回填：campaign.cn、阿里云、marketing-domains@163.com、2026-03-29、2027-03-29、45、29（¥）、35、Cloudflare、marketing@company.com、备注“活动页与投放短期站点”；取消后弹窗移除，焦点回到“更多操作 campaign.cn”按钮",
+      "verdict": "pass",
+      "shot": "candidate/desktop/15-domains-dialog-clone.png"
+    },
+    {
+      "id": "domains-dialog-detail",
+      "page": "/domains",
+      "item": "更多操作 → 查看详情：打开 / 关闭 / 焦点",
+      "candidate": "标题 campaign.cn，“正常 剩余 124 天”，注册信息、DNS 信息、其他信息齐全；右上角关闭后弹窗移除；焦点落在页面上",
+      "baseline": null,
+      "verdict": "note",
+      "note": "详情弹窗不是表单弹窗。基线上测过的三个账号弹窗关闭后焦点同样落在页面上，这一个没有在基线上单独测",
+      "shot": "candidate/desktop/16-domains-dialog-detail.png"
+    }
+  ],
+  "notVerified": [
+    "移动端 390×844 与跨断点缩放。本会话没有做，以协调者与总验收者的交叉实测为准",
+    "A2 的逐张 50ms 延迟、缓动曲线、无布局跳动的像素比对",
+    "首屏 JS 体积：没有运行 build + measure",
+    "账号详情页 /accounts/mock-account-1 的编辑弹窗与添加站点弹窗",
+    "添加域名弹窗；域名表单内嵌的站点快捷新建（内嵌账号快捷新建由协调者实测）",
+    "站点页的表格视图",
+    "日志页、任务执行页、设置页",
+    "深色主题下的关键场景（只有登录页一张是深色）",
+    "搜索、筛选、分页、刷新、行内启停开关、删除确认",
+    "基线一侧只取了 DOM 读数和服务端日志，没有截图，也没有重跑基线构建"
+  ],
+  "notTestable": [
+    "保存成功后的界面更新、提示、日志写入、通知发送：mock 模式下写入必然失败",
+    "页面加载期间的控制台 error / warning、失败请求、HTTP≥400 响应：官方浏览器工具没有 console 事件与网络事件的监听，也没有在页面脚本运行前注入的能力；按协调者指示没有注入钩子。交互之后的控制台输出同样没有采集",
+    "关键字搜索在真实 Supabase 上的结果"
+  ],
+  "preexistingObservations": [
+    {
+      "source": "实测",
+      "item": "弹窗右上角关闭按钮的可访问文本是英文 Close"
+    },
+    {
+      "source": "实测",
+      "item": "子域名表格行、账号表格行的编辑和删除按钮没有可访问名称；账号行的“管理站点”按钮只有 title，没有 aria-label。只能靠图标区分"
+    },
+    {
+      "source": "实测",
+      "item": "登录页的显示 / 隐藏秘钥按钮没有可访问名称"
+    },
+    {
+      "source": "实测",
+      "item": "站点页滚动到接近底部时，左侧分类导航高亮最后一项（点击 CDN 分类里的编辑按钮、页面被滚到下方后，高亮从云服务变成 DNS）"
+    },
+    {
+      "source": "服务端日志",
+      "item": "Next dev 提示登录页 Logo /icon.svg 被判为 LCP，建议加 loading=eager"
+    },
+    {
+      "source": "源码阅读（97d8af4），未在界面实测",
+      "item": "mock 模式下日志列表不按 category / timeRange 过滤"
+    },
+    {
+      "source": "源码阅读（97d8af4），未在界面实测",
+      "item": "/settings 有两个 h1"
+    },
+    {
+      "source": "源码阅读（97d8af4），未在界面实测",
+      "item": "proxy.ts 的受保护路由名单不含 /job-runs，由 (main) layout 的 requirePageAccess() 兜底重定向"
+    }
+  ],
+  "artifacts": {
+    "root": "/tmp/dm-accept-artifacts",
+    "candidateScreenshots": "candidate/desktop/01–16（PNG，1440×900，浅色；01 为深色）",
+    "candidateStaticLog": "candidate/static-typecheck-test.log",
+    "serverLogs": [
+      "baseline-server.log",
+      "candidate/candidate-server.log"
+    ],
+    "verification": "verification/snapshot-verification.txt",
+    "note": "原计划的 /tmp/dm-accept-artifacts/baseline/ 截图目录没有产生：基线一侧按协调者指示没有做截图比对"
+  },
+  "generatedAt": "2026-11-25 12:52:41 CST"
+}
