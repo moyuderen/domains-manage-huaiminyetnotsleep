@@ -3,7 +3,6 @@
 import { AlertTriangle, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { Pie, PieChart, Bar, BarChart, CartesianGrid, Cell, Tooltip, XAxis, YAxis } from 'recharts'
-import { motion } from 'framer-motion'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { type ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart'
@@ -206,13 +205,13 @@ export function AccountRiskCard({ inactiveWithDomains, staleAccounts }: AccountR
           {inactiveWithDomains.length > 0 && (
             <div className="space-y-3">
               <div className="text-muted-foreground text-xs">停用但有关联域名</div>
-              {inactiveWithDomains.slice(0, 3).map((account) => (
-                <motion.div key={account.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              {inactiveWithDomains.slice(0, 3).map((account, index) => (
+                <div key={account.id} className="dashboard-card-enter dashboard-risk-enter" style={{ animationDelay: `${index * 50}ms` }}>
                   <div className="bg-red-500/8 rounded-xl border border-red-500/15 p-3">
                     <div className="font-medium text-foreground text-sm">{account.identifier}</div>
                     <div className="text-muted-foreground mt-1 text-xs">关联 {account.domainCount} 个域名</div>
                   </div>
-                </motion.div>
+                </div>
               ))}
               {inactiveWithDomains.length > 3 && (
                 <div className="text-muted-foreground text-xs">还有 {inactiveWithDomains.length - 3} 个...</div>
@@ -222,8 +221,8 @@ export function AccountRiskCard({ inactiveWithDomains, staleAccounts }: AccountR
           {staleAccounts.length > 0 && (
             <div className="space-y-3">
               <div className="text-muted-foreground text-xs">超过 90 天未更新</div>
-              {staleAccounts.slice(0, 3).map((account) => (
-                <motion.div key={account.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              {staleAccounts.slice(0, 3).map((account, index) => (
+                <div key={account.id} className="dashboard-card-enter dashboard-risk-enter" style={{ animationDelay: `${index * 50}ms` }}>
                   <div className="bg-amber-500/8 rounded-xl border border-amber-500/15 p-3">
                     <div className="font-medium text-foreground text-sm">{account.identifier}</div>
                     <div className="text-muted-foreground mt-1 text-xs">
@@ -231,7 +230,7 @@ export function AccountRiskCard({ inactiveWithDomains, staleAccounts }: AccountR
                       {account.daysSinceUpdate} 天前更新
                     </div>
                   </div>
-                </motion.div>
+                </div>
               ))}
               {staleAccounts.length > 3 && (
                 <div className="text-muted-foreground text-xs">还有 {staleAccounts.length - 3} 个...</div>

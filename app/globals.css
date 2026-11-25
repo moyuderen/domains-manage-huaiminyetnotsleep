@@ -177,6 +177,27 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+@keyframes dashboard-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--dashboard-card-enter-y, 12px));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-risk-enter {
+  --dashboard-card-enter-y: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dashboard-card-enter {
+    animation: dashboard-card-enter 300ms ease-out backwards;
+  }
+}
+
 * {
   box-sizing: border-box;
   @apply border-border outline-ring/50;

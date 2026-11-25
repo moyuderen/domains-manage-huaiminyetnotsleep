@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { format, subDays } from 'date-fns'
 
 import { getActivityLogChanges } from '@/lib/activity-log-detail'
@@ -188,23 +190,23 @@ export async function getActivityLogSummary(): Promise<{
   try {
     const supabase = createSupabaseAdminClient()
     const today = getCreatedAfter('today')
-    const [totalResult, todayResult, authResult, changesResult] = await Promise.all([
-      supabase.from('activity_logs').select('*', { count: 'exact', head: true }),
+    const [todayResult, authResult, changesResult] = await Promise.all([
       supabase.from('activity_logs').select('*', { count: 'exact', head: true }).gte('occurred_at', today),
       supabase.from('activity_logs').select('*', { count: 'exact', head: true }).eq('category', 'auth'),
       supabase.from('activity_logs').select('*', { count: 'exact', head: true }).neq('category', 'auth'),
     ])
 
-    if (totalResult.error) throw new Error(totalResult.error.message)
     if (todayResult.error) throw new Error(todayResult.error.message)
     if (authResult.error) throw new Error(authResult.error.message)
     if (changesResult.error) throw new Error(changesResult.error.message)
 
+    const auth = authResult.count ?? 0
+    const changes = changesResult.count ?? 0
     return {
-      total: totalResult.count ?? 0,
+      total: auth + changes,
       today: todayResult.count ?? 0,
-      auth: authResult.count ?? 0,
-      changes: changesResult.count ?? 0,
+      auth,
+      changes,
     }
   } catch (error) {
     throw toSupabaseDataError('操作日志统计', error)

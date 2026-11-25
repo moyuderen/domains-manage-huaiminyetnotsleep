@@ -1,6 +1,7 @@
 import { DomainsPageClient } from '@/components/domains/DomainsPageClient'
 import { DataBoundary } from '@/components/common/DataSourceError'
-import { buildAccountLookup, getAllAccounts } from '@/lib/data/accounts'
+import { buildAccountLookup } from '@/lib/account-display'
+import { getAllAccounts } from '@/lib/data/accounts'
 import { getDomains, listAllDomainNames } from '@/lib/data/domains'
 import { collectDomainSuffixOptions } from '@/lib/domainSuffix'
 import { getNotificationRuleSettings } from '@/lib/data/settings'

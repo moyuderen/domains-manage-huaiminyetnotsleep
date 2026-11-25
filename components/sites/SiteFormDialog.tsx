@@ -22,33 +22,35 @@ const PRESET_CATEGORIES = ['注册商', 'DNS', 'CDN', '云服务', '邮箱', '�
 type SiteFormDialogProps = {
   open: boolean
   initialValue?: Site | null
+  onCloseAutoFocus: (event: Event) => void
   onClose: (createdSite?: Site) => void
 }
 
-export function SiteFormDialog({ open, initialValue, onClose }: SiteFormDialogProps) {
+function getSiteFormValues(initialValue?: Site | null): SiteFormValues {
+  if (!initialValue) return defaultSiteValues
+
+  return {
+    name: initialValue.name,
+    category: initialValue.category,
+    iconUrl: initialValue.iconUrl,
+    description: initialValue.description,
+    remark: initialValue.remark,
+    websiteUrl: initialValue.websiteUrl,
+    isActive: initialValue.isActive,
+  }
+}
+
+export function SiteFormDialog({ open, initialValue, onClose, onCloseAutoFocus }: SiteFormDialogProps) {
   const [loading, setLoading] = useState(false)
   const form = useForm<SiteFormValues>({
     resolver: zodResolver(siteSchema),
-    defaultValues: defaultSiteValues,
+    defaultValues: getSiteFormValues(initialValue),
   })
 
   useEffect(() => {
     if (!open) return
 
-    if (initialValue) {
-      form.reset({
-        name: initialValue.name,
-        category: initialValue.category,
-        iconUrl: initialValue.iconUrl,
-        description: initialValue.description,
-        remark: initialValue.remark,
-        websiteUrl: initialValue.websiteUrl,
-        isActive: initialValue.isActive,
-      })
-      return
-    }
-
-    form.reset(defaultSiteValues)
+    form.reset(getSiteFormValues(initialValue))
   }, [form, initialValue, open])
 
   const { register, handleSubmit, watch, setValue, formState: { errors } } = form
@@ -77,7 +79,7 @@ export function SiteFormDialog({ open, initialValue, onClose }: SiteFormDialogPr
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose() }}>
-      <DialogContent disableOutsideClose>
+      <DialogContent disableOutsideClose onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{initialValue ? '编辑站点' : '添加站点'}</DialogTitle>
           <DialogDescription>配置站点基本信息。</DialogDescription>

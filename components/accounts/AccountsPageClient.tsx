@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { Globe, KeyRound, Pencil, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
@@ -11,7 +12,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { MobilePagination } from '@/components/common/MobilePagination'
 import { AccountCardList } from '@/components/accounts/AccountCardList'
-import { AccountFormDialog } from '@/components/accounts/AccountFormDialog'
+import { useDesktopList } from '@/hooks/useDesktopList'
 import { useRefreshWithSpin } from '@/hooks/useRefreshWithSpin'
 import { SearchableSelect } from '@/components/searchable-select'
 import { Badge } from '@/components/ui/badge'
@@ -36,8 +37,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { EMAIL_PROVIDER_LABELS, type Account, type AccountFilters, type EmailProvider, type PaginatedAccounts, type SiteEntry } from '@/types/account'
-import { isEmail } from '@/schemas/accountSchemas'
+import { isEmail } from '@/lib/utils/email'
 import type { Site } from '@/types/site'
+import { useFormDialog } from '@/hooks/useFormDialog'
+
+const AccountFormDialog = dynamic(() => import('@/components/accounts/AccountFormDialog').then((module) => module.AccountFormDialog), { ssr: false })
 
 const EMAIL_PROVIDER_OPTIONS: Array<{ label: string; value: EmailProvider | 'all' }> = [
   { label: '全部账号类型', value: 'all' },
@@ -60,12 +64,17 @@ type AccountsPageClientProps = {
   emailIdentifiers: string[]
 }
 
+type AccountOverride = Partial<Pick<Account, 'isActive' | 'sites'>>
+
 export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSites, sites, emailIdentifiers }: AccountsPageClientProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [accounts, setAccounts] = useState(paginatedAccounts.items)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const { items } = paginatedAccounts
+  const [local, setLocal] = useState(() => ({ snapshot: items, overrides: new Map<string, AccountOverride>() }))
+  const [pendingToggles, setPendingToggles] = useState(() => new Set<string>())
+  const togglesInFlight = useRef(new Set<string>())
+  const accountDialog = useFormDialog()
   const [editingAccount, setEditingAccount] = useState<Account | null>(null)
   const [deletingAccount, setDeletingAccount] = useState<Account | null>(null)
   const [siteAccount, setSiteAccount] = useState<Account | null>(null)
@@ -74,6 +83,7 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
   const [keywordInput, setKeywordInput] = useState(initialFilters.keyword)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
   const { spinning, refresh } = useRefreshWithSpin()
+  const isDesktop = useDesktopList()
 
   const siteNamesById = useMemo(() => new Map(sites.map((site) => [site.id, site.name])), [sites])
   const siteOptions = [
@@ -81,9 +91,24 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
     ...usedSites.map((site) => ({ label: site.name, value: site.id })),
   ]
 
-  useEffect(() => {
-    setAccounts(paginatedAccounts.items)
-  }, [paginatedAccounts.items])
+  // A new server snapshot is authoritative, including when filtering or changing pages.
+  // Keep only per-row patches, never render the previous snapshot.
+  if (local.snapshot !== items) setLocal({ snapshot: items, overrides: new Map() })
+  const accounts = items.map((account) => {
+    const override = local.snapshot === items ? local.overrides.get(account.id) : undefined
+    return override ? { ...account, ...override } : account
+  })
+
+  const updateOverride = (accountId: string, update: (current: AccountOverride) => AccountOverride) => {
+    setLocal((current) => {
+      if (current.snapshot !== items) return current
+      const overrides = new Map(current.overrides)
+      const next = update(overrides.get(accountId) ?? {})
+      if (Object.keys(next).length > 0) overrides.set(accountId, next)
+      else overrides.delete(accountId)
+      return { ...current, overrides }
+    })
+  }
 
   useEffect(() => {
     setKeywordInput(initialFilters.keyword)
@@ -122,17 +147,30 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
     startFiltering(() => router.replace(params.toString() ? `${pathname}?${params.toString()}` : pathname))
   }
 
-  const handleToggleActive = (accountId: string, checked: boolean) => {
-    setAccounts((prev) => prev.map((account) => account.id === accountId ? { ...account, isActive: checked } : account))
-    startTransition(async () => {
-      try {
-        await toggleAccountActiveAction(accountId, checked)
-        toast.success(checked ? '账号已启用' : '账号已停用')
-      } catch {
-        setAccounts((prev) => prev.map((account) => account.id === accountId ? { ...account, isActive: !checked } : account))
-        toast.error('状态切换失败')
-      }
-    })
+  const handleToggleActive = async (accountId: string, checked: boolean) => {
+    // Serialize toggles for a row; an earlier failure must never roll back a newer click.
+    if (togglesInFlight.current.has(accountId)) return
+    togglesInFlight.current.add(accountId)
+    setPendingToggles((current) => new Set(current).add(accountId))
+    const previous = local.overrides.get(accountId)?.isActive
+    updateOverride(accountId, (current) => ({ ...current, isActive: checked }))
+    try {
+      await toggleAccountActiveAction(accountId, checked)
+      toast.success(checked ? '账号已启用' : '账号已停用')
+    } catch {
+      updateOverride(accountId, ({ sites }) => ({
+        ...(sites !== undefined ? { sites } : {}),
+        ...(previous !== undefined ? { isActive: previous } : {}),
+      }))
+      toast.error('状态切换失败')
+    } finally {
+      togglesInFlight.current.delete(accountId)
+      setPendingToggles((current) => {
+        const next = new Set(current)
+        next.delete(accountId)
+        return next
+      })
+    }
   }
 
   const handleDelete = () => {
@@ -154,7 +192,7 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
     startTransition(async () => {
       try {
         await updateAccountSitesAction(accountId, nextSites)
-        setAccounts((prev) => prev.map((a) => a.id === accountId ? { ...a, sites: nextSites } : a))
+        updateOverride(accountId, (current) => ({ ...current, sites: nextSites }))
         setSiteAccount(null)
         toast.success('站点已更新')
       } catch (error) {
@@ -291,7 +329,7 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <Button onClick={() => { setEditingAccount(null); setDialogOpen(true) }}>
+          <Button onClick={() => { setEditingAccount(null); accountDialog.show() }}>
             <Plus data-icon="inline-start" />
             添加账号
           </Button>
@@ -299,13 +337,13 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
       </div>
 
       {/* Desktop: Table */}
-      <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
+      {isDesktop !== false && <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
         {accounts.length === 0 ? (
           <EmptyState
             icon={<KeyRound className="size-6 text-muted-foreground/60" />}
             title="暂无账号数据"
             description="先添加可复用账号，后续可在域名、DNS、GitHub 等站点中直接选择。"
-            action={<Button onClick={() => { setEditingAccount(null); setDialogOpen(true) }}>添加账号</Button>}
+            action={<Button onClick={() => { setEditingAccount(null); accountDialog.show() }}>添加账号</Button>}
             fillHeight
             footer={paginationNode}
           />
@@ -367,6 +405,7 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
                         <TableCell onClick={(event) => event.stopPropagation()}>
                           <Switch
                             checked={account.isActive}
+                            disabled={pendingToggles.has(account.id)}
                             onCheckedChange={(checked) => handleToggleActive(account.id, checked)}
                             className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
                           />
@@ -376,7 +415,7 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
                             <Button variant="ghost" size="icon" onClick={() => setSiteAccount(account)} title="管理站点">
                               <Globe size={16} />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => { setEditingAccount(account); setDialogOpen(true) }}>
+                            <Button variant="ghost" size="icon" onClick={() => { setEditingAccount(account); accountDialog.show() }}>
                               <Pencil size={16} />
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => setDeletingAccount(account)}>
@@ -395,16 +434,16 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
             </div>
           </Card>
         )}
-      </div>
+      </div>}
 
       {/* Mobile: Card list */}
-      <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
+      {isDesktop !== true && <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
         {accounts.length === 0 ? (
           <EmptyState
             icon={<KeyRound className="size-6 text-muted-foreground/60" />}
             title="暂无账号数据"
             description="先添加可复用账号，后续可在域名、DNS、GitHub 等站点中直接选择。"
-            action={<Button onClick={() => { setEditingAccount(null); setDialogOpen(true) }}>添加账号</Button>}
+            action={<Button onClick={() => { setEditingAccount(null); accountDialog.show() }}>添加账号</Button>}
             fillHeight
           />
         ) : (
@@ -413,9 +452,10 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
               <AccountCardList
                 accounts={accounts}
                 sites={sites}
+                pendingToggles={pendingToggles}
                 onToggleActive={handleToggleActive}
                 onManageSites={setSiteAccount}
-                onEdit={(account) => { setEditingAccount(account); setDialogOpen(true) }}
+                onEdit={(account) => { setEditingAccount(account); accountDialog.show() }}
                 onDelete={setDeletingAccount}
                 onClickCard={(id) => router.push(`/accounts/${id}`)}
               />
@@ -423,19 +463,21 @@ export function AccountsPageClient({ initialFilters, paginatedAccounts, usedSite
             {mobilePaginationNode}
           </Card>
         )}
-      </div>
+      </div>}
 
-      <AccountFormDialog
-        open={dialogOpen}
-        initialValue={editingAccount}
-        sites={sites}
-        emailIdentifiers={emailIdentifiers}
-        onClose={() => {
-          setDialogOpen(false)
-          setEditingAccount(null)
-          router.refresh()
-        }}
-      />
+      {accountDialog.hasOpened && (
+        <AccountFormDialog
+          open={accountDialog.open}
+          onCloseAutoFocus={accountDialog.onCloseAutoFocus}
+          initialValue={editingAccount}
+          sites={sites}
+          emailIdentifiers={emailIdentifiers}
+          onClose={(result) => {
+            accountDialog.hide()
+            if (result?.saved) router.refresh()
+          }}
+        />
+      )}
 
       {siteAccount && (
         <SiteManageDialog

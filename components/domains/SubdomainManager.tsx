@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useState } from 'react'
 
 import { deleteSubdomainAction } from '@/app/actions/subdomains'
@@ -8,14 +9,16 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { toast } from 'sonner'
 import { SubdomainCardList } from '@/components/domains/SubdomainCardList'
-import { SubdomainFormDialog } from '@/components/domains/SubdomainFormDialog'
 import { SubdomainsTable } from '@/components/domains/SubdomainsTable'
 import type { Domain, Subdomain } from '@/types/domain'
+import { useFormDialog } from '@/hooks/useFormDialog'
+
+const SubdomainFormDialog = dynamic(() => import('@/components/domains/SubdomainFormDialog').then((module) => module.SubdomainFormDialog), { ssr: false })
 
 export function SubdomainManager({ domain, addIcon }: { domain: Domain; addIcon?: React.ReactNode }) {
   const [editingSubdomain, setEditingSubdomain] = useState<Subdomain | null>(null)
   const [deletingSubdomain, setDeletingSubdomain] = useState<Subdomain | null>(null)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const subdomainDialog = useFormDialog()
   const [loading, setLoading] = useState(false)
 
   return (
@@ -26,14 +29,14 @@ export function SubdomainManager({ domain, addIcon }: { domain: Domain; addIcon?
             <h2 className="text-lg font-semibold text-foreground">子域名信息</h2>
             <p className="mt-1 text-sm text-muted-foreground">管理当前域名下的子域名、对应 IP、用途说明和备注。</p>
           </div>
-          <Button onClick={() => { setEditingSubdomain(null); setDialogOpen(true) }}>{addIcon}新增子域名</Button>
+          <Button onClick={() => { setEditingSubdomain(null); subdomainDialog.show() }}>{addIcon}新增子域名</Button>
         </div>
         <div className="p-6">
           <div className="hidden md:block">
             <SubdomainsTable
               domainName={domain.name}
               subdomains={domain.subdomains}
-              onEdit={(subdomain) => { setEditingSubdomain(subdomain); setDialogOpen(true) }}
+              onEdit={(subdomain) => { setEditingSubdomain(subdomain); subdomainDialog.show() }}
               onDelete={setDeletingSubdomain}
             />
           </div>
@@ -41,22 +44,25 @@ export function SubdomainManager({ domain, addIcon }: { domain: Domain; addIcon?
             <SubdomainCardList
               domainName={domain.name}
               subdomains={domain.subdomains}
-              onEdit={(subdomain) => { setEditingSubdomain(subdomain); setDialogOpen(true) }}
+              onEdit={(subdomain) => { setEditingSubdomain(subdomain); subdomainDialog.show() }}
               onDelete={setDeletingSubdomain}
             />
           </div>
         </div>
       </Card>
 
-      <SubdomainFormDialog
-        open={dialogOpen}
-        domainId={domain.id}
-        initialValue={editingSubdomain}
-        onClose={() => {
-          setDialogOpen(false)
-          setEditingSubdomain(null)
-        }}
-      />
+      {subdomainDialog.hasOpened && (
+        <SubdomainFormDialog
+          open={subdomainDialog.open}
+          onCloseAutoFocus={subdomainDialog.onCloseAutoFocus}
+          domainId={domain.id}
+          initialValue={editingSubdomain}
+          onClose={() => {
+            subdomainDialog.hide()
+            setEditingSubdomain(null)
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={Boolean(deletingSubdomain)}

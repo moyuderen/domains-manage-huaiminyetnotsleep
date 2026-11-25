@@ -48,25 +48,39 @@ export async function updateAccountAction(id: string, values: AccountFormValues)
     const [previousAccount, headerStore] = await Promise.all([getAccountById(id), headers()])
     const requestContext = getActivityRequestContext(headerStore)
     const resourceName = parsed.identifier.trim()
-    const siteIds = [...new Set([
-      ...parsed.sites.map((site) => site.site),
-      ...(previousAccount?.sites.map((site) => site.site) ?? []),
-    ])]
-    const sites = await getSitesByIds(siteIds)
-
     await updateAccount(id, parsed)
-    after(() => tryEmitEvent({
-      category: 'account',
-      action: 'update',
-      resourceType: 'account',
-      resourceId: id,
-      resourceName,
-      summary: buildActivitySummary('update', '账号', resourceName),
-      requestContext,
-      detail: buildAccountUpdateDetailFromForm(previousAccount, parsed, {
-        siteNamesById: new Map(sites.map((site) => [site.id, site.name])),
-      }),
-    }))
+    const occurredAt = new Date().toISOString()
+    after(async () => {
+      let detail
+      try {
+        const siteIds = [...new Set([
+          ...parsed.sites.map((site) => site.site),
+          ...(previousAccount?.sites.map((site) => site.site) ?? []),
+        ])]
+        let siteNamesById
+        try {
+          const sites = await getSitesByIds(siteIds)
+          siteNamesById = new Map(sites.map((site) => [site.id, site.name]))
+        } catch (error) {
+          console.error('Failed to resolve site names for account update audit.', error)
+        }
+        detail = buildAccountUpdateDetailFromForm(previousAccount, parsed, { siteNamesById })
+      } catch (error) {
+        console.error('Failed to format account update audit detail.', error)
+      }
+
+      await tryEmitEvent({
+        category: 'account',
+        action: 'update',
+        resourceType: 'account',
+        resourceId: id,
+        resourceName,
+        summary: buildActivitySummary('update', '账号', resourceName),
+        requestContext,
+        occurredAt,
+        detail,
+      })
+    })
     revalidatePath('/accounts')
     revalidatePath('/domains')
     revalidatePath('/logs')

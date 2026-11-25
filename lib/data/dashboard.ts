@@ -1,3 +1,5 @@
+import 'server-only'
+
 import { unstable_cache } from 'next/cache'
 
 import { getAccountProviderDistribution, getAccountReuseDistribution, getAccountRisks, getAccountSiteDistribution, getAccountStatistics, getCreatedTrend, getDnsProviderDistribution, getDomainSuffixDistribution, getExpiryTimeline, getFreePaidDistribution, getRegistrarDistribution, getStatusDistribution, getUpcomingRisk, getSiteStatistics, getSiteAccountCountDistribution } from '@/lib/dashboard'

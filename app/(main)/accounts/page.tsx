@@ -3,7 +3,7 @@ import { DataBoundary } from '@/components/common/DataSourceError'
 import { getAccounts, getUsedSites, getAllAccounts } from '@/lib/data/accounts'
 import { getActiveSites } from '@/lib/data/sites'
 import { getSingleParam } from '@/lib/utils/params'
-import { isEmail } from '@/schemas/accountSchemas'
+import { isEmail } from '@/lib/utils/email'
 import { EMAIL_PROVIDERS, type AccountFilters, type EmailProvider } from '@/types/account'
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const

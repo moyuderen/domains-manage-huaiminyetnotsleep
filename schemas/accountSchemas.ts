@@ -8,12 +8,6 @@ const siteEntrySchema = z.object({
   isActive: z.boolean(),
 })
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-export function isEmail(value: string): boolean {
-  return EMAIL_REGEX.test(value.trim())
-}
-
 export const accountSchema = z
   .object({
     identifier: z.string().trim().min(1, '请输入账号标识').max(200),

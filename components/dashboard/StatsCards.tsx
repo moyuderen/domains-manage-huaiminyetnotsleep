@@ -2,7 +2,6 @@
 
 import { Activity, CalendarClock, CircleAlert, Globe, Server, ServerCog, ServerOff, Tags, User, UserCheck, UserX, UserPlus, type LucideIcon } from 'lucide-react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 
 import { Card, CardContent } from '@/components/ui/card'
 
@@ -68,13 +67,13 @@ export function DomainStatsCards({ statistics }: { statistics: DomainStatistics 
         )
 
         return (
-          <motion.div key={item.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-            {item.href ? (
-              <Link href={item.href} className="block rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
-                {card}
-              </Link>
-            ) : card}
-          </motion.div>
+          item.href ? (
+            <Link key={item.key} href={item.href} className="dashboard-card-enter block rounded-xl outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" style={{ animationDelay: `${index * 50}ms` }}>
+              {card}
+            </Link>
+          ) : (
+            <div key={item.key} className="dashboard-card-enter" style={{ animationDelay: `${index * 50}ms` }}>{card}</div>
+          )
         )
       })}
     </div>
@@ -88,7 +87,7 @@ export function AccountStatsCards({ statistics }: { statistics: AccountStatistic
         const Icon = item.icon
 
         return (
-          <motion.div key={item.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+          <div key={item.key} className="dashboard-card-enter" style={{ animationDelay: `${index * 50}ms` }}>
             <Card className="transition-all duration-200 hover:shadow-md">
               <CardContent>
                 <div className="flex items-start justify-between gap-3">
@@ -102,7 +101,7 @@ export function AccountStatsCards({ statistics }: { statistics: AccountStatistic
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         )
       })}
     </div>
@@ -130,7 +129,7 @@ export function SiteStatsCards({ statistics }: { statistics: SiteStatistics }) {
         const Icon = item.icon
 
         return (
-          <motion.div key={item.key} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+          <div key={item.key} className="dashboard-card-enter" style={{ animationDelay: `${index * 50}ms` }}>
             <Card className="transition-all duration-200 hover:shadow-md">
               <CardContent>
                 <div className="flex items-start justify-between gap-3">
@@ -144,7 +143,7 @@ export function SiteStatsCards({ statistics }: { statistics: SiteStatistics }) {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         )
       })}
     </div>

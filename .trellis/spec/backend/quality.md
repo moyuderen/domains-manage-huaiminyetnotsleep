@@ -34,6 +34,7 @@ npm run build     # 生产构建成功
 - [ ] 检查 Supabase 错误：`if (error) throw new Error(error.message)`
 - [ ] 循环中不使用 `await`（批量查询使用 `.in()`）
 - [ ] 读取 admin client、provider token、endpoint secret 的 `lib/data/*` / provider helper 显式标记 `server-only`
+- [ ] 客户端需要的格式化、查找等纯函数从独立模块导入，不在 `lib/data/*` 里声明或转发；若调整跨边界的导入，检查生产静态 JS 不含服务端数据客户端
 
 ## 类型安全
 

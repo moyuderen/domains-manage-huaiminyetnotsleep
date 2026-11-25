@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
@@ -12,9 +13,9 @@ import { Globe } from 'lucide-react'
 import { DEFAULT_VISIBLE_DOMAIN_COLUMNS, type HideableDomainColumnKey } from '@/components/domains/domain-columns'
 import { DomainCardList } from '@/components/domains/DomainCardList'
 import { DomainDetailsDialog } from '@/components/domains/DomainDetailsDialog'
-import { DomainFormDialog } from '@/components/domains/DomainFormDialog'
 import { DomainTable } from '@/components/domains/DomainTable'
 import { DomainToolbar } from '@/components/domains/DomainToolbar'
+import { useDesktopList } from '@/hooks/useDesktopList'
 import { useRefreshWithSpin } from '@/hooks/useRefreshWithSpin'
 import {
   Pagination,
@@ -31,9 +32,12 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { DEFAULT_DOMAIN_SORT_BY, DEFAULT_DOMAIN_SORT_ORDER, type Domain, type DomainDialogMode, type DomainFilters, type PaginatedDomains } from '@/types/domain'
 import type { DomainSuffixOption } from '@/lib/domainSuffix'
-import type { AccountLookup } from '@/lib/data/accounts'
+import type { AccountLookup } from '@/lib/account-display'
 import type { Account } from '@/types/account'
 import type { Site } from '@/types/site'
+import { useFormDialog } from '@/hooks/useFormDialog'
+
+const DomainFormDialog = dynamic(() => import('@/components/domains/DomainFormDialog').then((module) => module.DomainFormDialog), { ssr: false })
 
 const DOMAIN_COLUMNS_STORAGE_KEY = 'domains-visible-columns'
 
@@ -44,7 +48,8 @@ export function DomainsPageClient({ initialFilters, paginatedDomains, sites, lin
   const [isPending, startTransition] = useTransition()
   const [isFiltering, startFiltering] = useTransition()
   const { spinning, refresh } = useRefreshWithSpin()
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const isDesktop = useDesktopList()
+  const domainDialog = useFormDialog()
   const [dialogMode, setDialogMode] = useState<DomainDialogMode>('create')
   const [activeDomain, setActiveDomain] = useState<Domain | null>(null)
   const [deletingDomain, setDeletingDomain] = useState<Domain | null>(null)
@@ -153,7 +158,7 @@ export function DomainsPageClient({ initialFilters, paginatedDomains, sites, lin
   const openDomainDialog = (mode: DomainDialogMode, domain: Domain | null = null) => {
     setDialogMode(mode)
     setActiveDomain(domain)
-    setDialogOpen(true)
+    domainDialog.show()
   }
 
   const paginationItems = buildPaginationItems(paginatedDomains.page, paginatedDomains.totalPages)
@@ -253,7 +258,7 @@ export function DomainsPageClient({ initialFilters, paginatedDomains, sites, lin
       />
 
       {/* Desktop: Table */}
-      <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
+      {isDesktop !== false && <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
         <DomainTable
           domains={domains}
           linkSites={linkSites}
@@ -269,10 +274,10 @@ export function DomainsPageClient({ initialFilters, paginatedDomains, sites, lin
           onDelete={setDeletingDomain}
           pagination={paginationNode}
         />
-      </div>
+      </div>}
 
       {/* Mobile: Card list */}
-      <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
+      {isDesktop !== true && <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
         <Card className="flex min-h-0 flex-1 flex-col gap-0 overflow-hidden p-0">
           <div className="min-h-0 flex-1 overflow-auto p-3">
             {domains.length === 0 ? (
@@ -298,21 +303,24 @@ export function DomainsPageClient({ initialFilters, paginatedDomains, sites, lin
           </div>
           {mobilePaginationNode}
         </Card>
-      </div>
+      </div>}
 
-      <DomainFormDialog
-        open={dialogOpen}
-        mode={dialogMode}
-        initialValue={activeDomain}
-        sites={sites}
-        accounts={accounts}
-        onClose={(shouldRefresh) => {
-          setDialogOpen(false)
-          setDialogMode('create')
-          setActiveDomain(null)
-          if (shouldRefresh) router.refresh()
-        }}
-      />
+      {domainDialog.hasOpened && (
+        <DomainFormDialog
+          open={domainDialog.open}
+          onCloseAutoFocus={domainDialog.onCloseAutoFocus}
+          mode={dialogMode}
+          initialValue={activeDomain}
+          sites={sites}
+          accounts={accounts}
+          onClose={(shouldRefresh) => {
+            domainDialog.hide()
+            setDialogMode('create')
+            setActiveDomain(null)
+            if (shouldRefresh) router.refresh()
+          }}
+        />
+      )}
 
       <ConfirmDialog
         open={Boolean(deletingDomain)}

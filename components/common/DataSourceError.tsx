@@ -2,7 +2,7 @@ import { AlertTriangle, Database } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { Card, CardContent } from '@/components/ui/card'
-import { isSupabaseDataError, type SupabaseDataError } from '@/lib/supabase/data-error'
+import { isSupabaseDataError } from '@/lib/supabase/data-error'
 
 /**
  * 数据加载边界：SupabaseDataError 渲染为页面内的错误面板（生产环境也能看到来源与详情），

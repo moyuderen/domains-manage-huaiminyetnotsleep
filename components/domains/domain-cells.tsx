@@ -1,5 +1,5 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { resolveAccountDisplay, type AccountLookup } from '@/lib/data/accounts'
+import { resolveAccountDisplay, type AccountLookup } from '@/lib/account-display'
 import type { Site } from '@/types/site'
 
 export function SiteLinkCell({ siteId, siteById }: { siteId: string | null; siteById: Map<string, Site> }) {

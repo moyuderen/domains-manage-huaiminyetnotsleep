@@ -18,31 +18,33 @@ type SubdomainFormDialogProps = {
   open: boolean
   domainId: string
   initialValue?: Subdomain | null
+  onCloseAutoFocus: (event: Event) => void
   onClose: () => void
 }
 
-export function SubdomainFormDialog({ open, domainId, initialValue, onClose }: SubdomainFormDialogProps) {
+function getSubdomainFormValues(initialValue?: Subdomain | null): SubdomainFormValues {
+  if (!initialValue) return defaultSubdomainValues
+
+  return {
+    subdomain: initialValue.subdomain,
+    ip: initialValue.ip,
+    ipRemark: initialValue.ipRemark ?? '',
+    description: initialValue.description,
+    remark: initialValue.remark,
+  }
+}
+
+export function SubdomainFormDialog({ open, domainId, initialValue, onClose, onCloseAutoFocus }: SubdomainFormDialogProps) {
   const [loading, setLoading] = useState(false)
   const form = useForm<SubdomainFormValues>({
     resolver: zodResolver(subdomainSchema),
-    defaultValues: defaultSubdomainValues,
+    defaultValues: getSubdomainFormValues(initialValue),
   })
 
   useEffect(() => {
     if (!open) return
 
-    if (initialValue) {
-      form.reset({
-        subdomain: initialValue.subdomain,
-        ip: initialValue.ip,
-        ipRemark: initialValue.ipRemark ?? '',
-        description: initialValue.description,
-        remark: initialValue.remark,
-      })
-      return
-    }
-
-    form.reset(defaultSubdomainValues)
+    form.reset(getSubdomainFormValues(initialValue))
   }, [form, initialValue, open])
 
   const { register, handleSubmit, formState: { errors } } = form
@@ -69,7 +71,7 @@ export function SubdomainFormDialog({ open, domainId, initialValue, onClose }: S
     <Dialog open={open} onOpenChange={(nextOpen: boolean) => {
       if (!nextOpen) onClose()
     }}>
-      <DialogContent disableOutsideClose>
+      <DialogContent disableOutsideClose onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{initialValue ? '编辑子域名' : '新增子域名'}</DialogTitle>
           <DialogDescription>维护当前域名下的子域名、对应 IP、用途说明和备注。</DialogDescription>

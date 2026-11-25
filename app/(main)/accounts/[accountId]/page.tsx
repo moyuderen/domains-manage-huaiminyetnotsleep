@@ -4,7 +4,7 @@ import { AccountDetailsPage } from '@/components/accounts/AccountDetailsPage'
 import { DataBoundary } from '@/components/common/DataSourceError'
 import { getAccountById, getAllAccounts } from '@/lib/data/accounts'
 import { getActiveSites } from '@/lib/data/sites'
-import { isEmail } from '@/schemas/accountSchemas'
+import { isEmail } from '@/lib/utils/email'
 
 export default async function AccountDetailsRoute({ params }: { params: Promise<{ accountId: string }> }) {
   const { accountId } = await params

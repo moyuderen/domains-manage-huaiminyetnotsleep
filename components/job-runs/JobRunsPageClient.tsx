@@ -28,6 +28,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useDesktopList } from '@/hooks/useDesktopList'
 import { useRefreshWithSpin } from '@/hooks/useRefreshWithSpin'
 import { cn } from '@/lib/utils'
 import { buildPaginationItems, PAGE_SIZE_OPTIONS } from '@/lib/utils/pagination'
@@ -76,6 +77,7 @@ export function JobRunsPageClient({ paginatedRuns, summary }: JobRunsPageClientP
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const { spinning, refresh } = useRefreshWithSpin()
+  const isDesktop = useDesktopList()
   const [runningJob, setRunningJob] = useState<RunnableJobKey | null>(null)
   const [isFiltering, startFiltering] = useTransition()
 
@@ -218,7 +220,7 @@ export function JobRunsPageClient({ paginatedRuns, summary }: JobRunsPageClientP
           <SummaryMetric label="失败次数" value={summary.failed} />
         </div>
 
-        <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
+        {isDesktop !== false && <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
           {paginatedRuns.items.length === 0 ? (
             <EmptyState
               icon={<ListTree className="size-6 text-muted-foreground/60" />}
@@ -265,9 +267,9 @@ export function JobRunsPageClient({ paginatedRuns, summary }: JobRunsPageClientP
               </div>
             </Card>
           )}
-        </div>
+        </div>}
 
-        <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
+        {isDesktop !== true && <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
           {paginatedRuns.items.length === 0 ? (
             <EmptyState
               icon={<ListTree className="size-6 text-muted-foreground/60" />}
@@ -287,7 +289,7 @@ export function JobRunsPageClient({ paginatedRuns, summary }: JobRunsPageClientP
               {mobilePaginationNode}
             </Card>
           )}
-        </div>
+        </div>}
       </div>
     </TooltipProvider>
   )

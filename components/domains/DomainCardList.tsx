@@ -13,7 +13,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { formatDate } from '@/lib/date'
 import { cn } from '@/lib/utils'
 import { getDomainStatus, getExpiryCountdownLabel, getStatusColor, getStatusLabel } from '@/lib/domainStatus'
-import type { AccountLookup } from '@/lib/data/accounts'
+import type { AccountLookup } from '@/lib/account-display'
 import type { Domain } from '@/types/domain'
 import type { Site } from '@/types/site'
 

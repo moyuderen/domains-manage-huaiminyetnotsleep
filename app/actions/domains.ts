@@ -48,41 +48,63 @@ export async function updateDomainAction(id: string, values: DomainFormValues) {
   const resourceName = normalizeDomainName(parsed.name)
   const [previousDomain, headerStore] = await Promise.all([getDomainById(id), headers()])
   const requestContext = getActivityRequestContext(headerStore)
-  const accountIds = [...new Set([
-    parsed.registrarAccountId,
-    parsed.dnsAccountId,
-    previousDomain?.registrarAccountId ?? '',
-    previousDomain?.dnsAccountId ?? '',
-  ].filter(Boolean))]
-  const siteIds = [...new Set([
-    parsed.registrarSiteId,
-    parsed.dnsSiteId,
-    previousDomain?.registrarSiteId ?? '',
-    previousDomain?.dnsSiteId ?? '',
-  ].filter(Boolean))]
-  const [accounts, sites] = await Promise.all([getAccountsByIds(accountIds), getSitesByIds(siteIds)])
-
   await updateDomain(id, parsed)
   await ensureAccountSiteRelations(getAccountSiteRelations(parsed))
 
-  const detail = buildDomainUpdateDetailFromForm(previousDomain, {
-    ...parsed,
-    name: resourceName,
-  }, {
-    accountNamesById: new Map(accounts.map((account) => [account.id, account.identifier])),
-    siteNamesById: new Map(sites.map((site) => [site.id, site.name])),
-  })
+  const occurredAt = new Date().toISOString()
+  after(async () => {
+    let detail
+    try {
+      const accountIds = [...new Set([
+        parsed.registrarAccountId,
+        parsed.dnsAccountId,
+        previousDomain?.registrarAccountId ?? '',
+        previousDomain?.dnsAccountId ?? '',
+      ].filter(Boolean))]
+      const siteIds = [...new Set([
+        parsed.registrarSiteId,
+        parsed.dnsSiteId,
+        previousDomain?.registrarSiteId ?? '',
+        previousDomain?.dnsSiteId ?? '',
+      ].filter(Boolean))]
+      const [accounts, sites] = await Promise.all([
+        (async () => {
+          try {
+            return await getAccountsByIds(accountIds)
+          } catch (error) {
+            console.error('Failed to resolve account names for domain update audit.', error)
+            return []
+          }
+        })(),
+        (async () => {
+          try {
+            return await getSitesByIds(siteIds)
+          } catch (error) {
+            console.error('Failed to resolve site names for domain update audit.', error)
+            return []
+          }
+        })(),
+      ])
+      detail = buildDomainUpdateDetailFromForm(previousDomain, { ...parsed, name: resourceName }, {
+        accountNamesById: new Map(accounts.map((account) => [account.id, account.identifier])),
+        siteNamesById: new Map(sites.map((site) => [site.id, site.name])),
+      })
+    } catch (error) {
+      console.error('Failed to format domain update audit detail.', error)
+    }
 
-  after(() => tryEmitEvent({
-    category: 'domain',
-    action: 'update',
-    resourceType: 'domain',
-    resourceId: id,
-    resourceName,
-    summary: buildActivitySummary('update', '域名', resourceName),
-    requestContext,
-    detail,
-  }))
+    await tryEmitEvent({
+      category: 'domain',
+      action: 'update',
+      resourceType: 'domain',
+      resourceId: id,
+      resourceName,
+      summary: buildActivitySummary('update', '域名', resourceName),
+      requestContext,
+      occurredAt,
+      detail,
+    })
+  })
   revalidatePath('/')
   revalidatePath('/dashboard')
   revalidatePath('/logs')

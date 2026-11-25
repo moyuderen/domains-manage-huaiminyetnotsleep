@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { format, isValid, parse } from 'date-fns'
 import { CalendarIcon, PlusIcon } from 'lucide-react'
@@ -9,8 +10,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 import { createDomainAction, updateDomainAction } from '@/app/actions/domains'
-import { AccountFormDialog } from '@/components/accounts/AccountFormDialog'
-import { SiteFormDialog } from '@/components/sites/SiteFormDialog'
 import { SearchableSelect } from '@/components/searchable-select'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -24,11 +23,15 @@ import { Switch } from '@/components/ui/switch'
 import { currencyLabel, currencySymbol } from '@/lib/currency'
 import { dedupeById } from '@/lib/utils'
 import { addOneYearToDateValue, defaultDomainValues, domainSchema } from '@/schemas/domainSchemas'
-import { isEmail } from '@/schemas/accountSchemas'
+import { isEmail } from '@/lib/utils/email'
 import { toast } from 'sonner'
 import type { Account } from '@/types/account'
 import type { Domain, DomainDialogMode, DomainFormValues } from '@/types/domain'
 import type { Site } from '@/types/site'
+import { useFormDialog } from '@/hooks/useFormDialog'
+
+const AccountFormDialog = dynamic(() => import('@/components/accounts/AccountFormDialog').then((module) => module.AccountFormDialog), { ssr: false })
+const SiteFormDialog = dynamic(() => import('@/components/sites/SiteFormDialog').then((module) => module.SiteFormDialog), { ssr: false })
 
 type DomainFormDialogProps = {
   open: boolean
@@ -36,17 +39,39 @@ type DomainFormDialogProps = {
   initialValue?: Domain | null
   sites: Site[]
   accounts: Account[]
+  onCloseAutoFocus: (event: Event) => void
   onClose: (shouldRefresh?: boolean) => void
 }
 
 const UNSET_SELECT_VALUE = '__unset__'
 
-export function DomainFormDialog({ open, mode, initialValue, sites, accounts, onClose }: DomainFormDialogProps) {
+function getDomainFormValues(mode: DomainDialogMode, initialValue?: Domain | null): DomainFormValues {
+  if (!initialValue || mode === 'create') return defaultDomainValues
+
+  return {
+    name: initialValue.name,
+    registrarAccountId: initialValue.registrarAccountId ?? '',
+    registrarSiteId: initialValue.registrarSiteId ?? '',
+    registrationDate: initialValue.registrationDate ?? '',
+    expiryDate: initialValue.expiryDate ?? '',
+    dnsAccountId: initialValue.dnsAccountId ?? '',
+    dnsSiteId: initialValue.dnsSiteId ?? '',
+    renewalDaysBeforeExpiry: initialValue.renewalDaysBeforeExpiry != null ? String(initialValue.renewalDaysBeforeExpiry) : '',
+    isFree: String(initialValue.isFree),
+    currency: initialValue.currency,
+    purchasePrice: initialValue.purchasePrice != null ? String(initialValue.purchasePrice) : '',
+    renewalPrice: initialValue.renewalPrice != null ? String(initialValue.renewalPrice) : '',
+    autoRenewal: String(initialValue.autoRenewal),
+    remark: initialValue.remark,
+  }
+}
+
+export function DomainFormDialog({ open, mode, initialValue, sites, accounts, onClose, onCloseAutoFocus }: DomainFormDialogProps) {
   const [loading, setLoading] = useState(false)
-  const [accountDialogOpen, setAccountDialogOpen] = useState(false)
+  const accountDialog = useFormDialog()
   const [quickCreateType, setQuickCreateType] = useState<'registrar' | 'dns' | null>(null)
   const [createdAccounts, setCreatedAccounts] = useState<Account[]>([])
-  const [siteDialogOpen, setSiteDialogOpen] = useState(false)
+  const siteDialog = useFormDialog()
   const [siteQuickCreateType, setSiteQuickCreateType] = useState<'registrar' | 'dns' | null>(null)
   const [createdSites, setCreatedSites] = useState<Site[]>([])
   const expiryDateTouchedRef = useRef(false)
@@ -54,7 +79,7 @@ export function DomainFormDialog({ open, mode, initialValue, sites, accounts, on
   const pendingAccountRef = useRef<{ id: string; type: 'registrar' | 'dns' } | null>(null)
   const form = useForm<DomainFormValues>({
     resolver: zodResolver(domainSchema),
-    defaultValues: defaultDomainValues,
+    defaultValues: getDomainFormValues(mode, initialValue),
   })
 
   const allSites = useMemo(
@@ -73,29 +98,7 @@ export function DomainFormDialog({ open, mode, initialValue, sites, accounts, on
     pendingAccountRef.current = null
     expiryDateTouchedRef.current = false
 
-    if (mode !== 'create' && initialValue) {
-      const nextValues = {
-        name: initialValue.name,
-        registrarAccountId: initialValue.registrarAccountId ?? '',
-        registrarSiteId: initialValue.registrarSiteId ?? '',
-        registrationDate: initialValue.registrationDate ?? '',
-        expiryDate: initialValue.expiryDate ?? '',
-        dnsAccountId: initialValue.dnsAccountId ?? '',
-        dnsSiteId: initialValue.dnsSiteId ?? '',
-        renewalDaysBeforeExpiry: initialValue.renewalDaysBeforeExpiry != null ? String(initialValue.renewalDaysBeforeExpiry) : '',
-        isFree: String(initialValue.isFree),
-        currency: initialValue.currency,
-        purchasePrice: initialValue.purchasePrice != null ? String(initialValue.purchasePrice) : '',
-        renewalPrice: initialValue.renewalPrice != null ? String(initialValue.renewalPrice) : '',
-        autoRenewal: String(initialValue.autoRenewal),
-        remark: initialValue.remark,
-      } satisfies DomainFormValues
-
-      form.reset(nextValues)
-      return
-    }
-
-    form.reset(defaultDomainValues)
+    form.reset(getDomainFormValues(mode, initialValue))
   }, [form, initialValue, mode, open])
 
   const { register, handleSubmit, setValue, getValues, watch, control, trigger, formState: { errors } } = form
@@ -190,7 +193,7 @@ export function DomainFormDialog({ open, mode, initialValue, sites, accounts, on
 
   const openQuickCreate = (type: 'registrar' | 'dns') => {
     setQuickCreateType(type)
-    setAccountDialogOpen(true)
+    accountDialog.show()
   }
 
   const submit = async (values: DomainFormValues) => {
@@ -215,7 +218,7 @@ export function DomainFormDialog({ open, mode, initialValue, sites, accounts, on
     <Dialog open={open} onOpenChange={(nextOpen: boolean) => {
       if (!nextOpen) onClose()
     }}>
-      <DialogContent disableOutsideClose className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-2xl">
+      <DialogContent disableOutsideClose onCloseAutoFocus={onCloseAutoFocus} className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{mode === 'edit' ? '编辑域名' : mode === 'clone' ? '复制域名' : '添加域名'}</DialogTitle>
           <DialogDescription>
@@ -264,7 +267,7 @@ export function DomainFormDialog({ open, mode, initialValue, sites, accounts, on
                   title="快速新建注册站点"
                   onClick={() => {
                     setSiteQuickCreateType('registrar')
-                    setSiteDialogOpen(true)
+                    siteDialog.show()
                   }}
                 >
                   <PlusIcon />
@@ -472,7 +475,7 @@ export function DomainFormDialog({ open, mode, initialValue, sites, accounts, on
                   title="快速新建 DNS 站点"
                   onClick={() => {
                     setSiteQuickCreateType('dns')
-                    setSiteDialogOpen(true)
+                    siteDialog.show()
                   }}
                 >
                   <PlusIcon />
@@ -539,42 +542,49 @@ export function DomainFormDialog({ open, mode, initialValue, sites, accounts, on
           </div>
         </form>
       </DialogContent>
-      <AccountFormDialog
-        open={accountDialogOpen}
-        sites={allSites}
-        emailIdentifiers={allAccounts.filter((a) => isEmail(a.identifier)).map((a) => a.identifier)}
-        onClose={(createdAccount) => {
-          setAccountDialogOpen(false)
+      {accountDialog.hasOpened && (
+        <AccountFormDialog
+          open={accountDialog.open}
+          onCloseAutoFocus={accountDialog.onCloseAutoFocus}
+          sites={allSites}
+          emailIdentifiers={allAccounts.filter((a) => isEmail(a.identifier)).map((a) => a.identifier)}
+          onClose={(result) => {
+            accountDialog.hide()
+            const createdAccount = result?.createdAccount
 
-          if (!createdAccount) {
+            if (!createdAccount) {
+              setQuickCreateType(null)
+              return
+            }
+
+            setCreatedAccounts((prev) => (prev.some((account) => account.id === createdAccount.id) ? prev : [...prev, createdAccount]))
+
+            pendingAccountRef.current = { id: createdAccount.id, type: quickCreateType! }
+
             setQuickCreateType(null)
-            return
-          }
+          }}
+        />
+      )}
+      {siteDialog.hasOpened && (
+        <SiteFormDialog
+          open={siteDialog.open}
+          onCloseAutoFocus={siteDialog.onCloseAutoFocus}
+          onClose={(createdSite) => {
+            siteDialog.hide()
 
-          setCreatedAccounts((prev) => (prev.some((account) => account.id === createdAccount.id) ? prev : [...prev, createdAccount]))
+            if (!createdSite) {
+              setSiteQuickCreateType(null)
+              return
+            }
 
-          pendingAccountRef.current = { id: createdAccount.id, type: quickCreateType! }
+            setCreatedSites((prev) => (prev.some((site) => site.id === createdSite.id) ? prev : [...prev, createdSite]))
 
-          setQuickCreateType(null)
-        }}
-      />
-      <SiteFormDialog
-        open={siteDialogOpen}
-        onClose={(createdSite) => {
-          setSiteDialogOpen(false)
+            pendingSiteRef.current = { id: createdSite.id, type: siteQuickCreateType! }
 
-          if (!createdSite) {
             setSiteQuickCreateType(null)
-            return
-          }
-
-          setCreatedSites((prev) => (prev.some((site) => site.id === createdSite.id) ? prev : [...prev, createdSite]))
-
-          pendingSiteRef.current = { id: createdSite.id, type: siteQuickCreateType! }
-
-          setSiteQuickCreateType(null)
-        }}
-      />
+          }}
+        />
+      )}
     </Dialog>
   )
 }

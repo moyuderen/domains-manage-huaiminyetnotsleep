@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { formatActivityDevice, formatActivityIp } from '@/lib/mappers/activity-log'
+import { useDesktopList } from '@/hooks/useDesktopList'
 import { useRefreshWithSpin } from '@/hooks/useRefreshWithSpin'
 import { cn } from '@/lib/utils'
 import { buildPaginationItems, PAGE_SIZE_OPTIONS } from '@/lib/utils/pagination'
@@ -58,6 +59,7 @@ export function LogsPageClient({ initialFilters, paginatedLogs, summary }: LogsP
   const [isFiltering, startFiltering] = useTransition()
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(null)
   const { spinning, refresh } = useRefreshWithSpin()
+  const isDesktop = useDesktopList()
 
   useEffect(() => {
     setKeywordInput(initialFilters.keyword)
@@ -241,7 +243,7 @@ export function LogsPageClient({ initialFilters, paginatedLogs, summary }: LogsP
           </CardContent>
         </Card>
 
-        <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
+        {isDesktop !== false && <div className={cn('hidden min-h-0 flex-1 transition-opacity md:flex md:flex-col', isFiltering && 'pointer-events-none opacity-60')}>
           {paginatedLogs.items.length === 0 ? (
             <EmptyState
               icon={<ClipboardList className="size-6 text-muted-foreground/60" />}
@@ -305,9 +307,9 @@ export function LogsPageClient({ initialFilters, paginatedLogs, summary }: LogsP
             </div>
           </Card>
         )}
-      </div>
+      </div>}
 
-        <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
+        {isDesktop !== true && <div className={cn('flex min-h-0 flex-1 flex-col transition-opacity md:hidden', isFiltering && 'pointer-events-none opacity-60')}>
           {paginatedLogs.items.length === 0 ? (
             <EmptyState
               icon={<ClipboardList className="size-6 text-muted-foreground/60" />}
@@ -327,7 +329,7 @@ export function LogsPageClient({ initialFilters, paginatedLogs, summary }: LogsP
               {mobilePaginationNode}
             </Card>
           )}
-        </div>
+        </div>}
       </div>
       <ActivityLogDetailDialog
         open={Boolean(selectedLog && selectedLogChanges.length > 0)}

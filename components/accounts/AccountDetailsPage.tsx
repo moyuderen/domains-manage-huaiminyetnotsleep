@@ -1,11 +1,11 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { ChevronLeft, Pencil, Plus, Trash2, X } from 'lucide-react'
 import Link from 'next/link'
 import { useMemo, useState, useTransition } from 'react'
 
 import { updateAccountSitesAction } from '@/app/actions/accounts'
-import { AccountFormDialog } from '@/components/accounts/AccountFormDialog'
 import { AccountSiteCardList } from '@/components/accounts/AccountSiteCardList'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -22,6 +22,9 @@ import type { Site } from '@/types/site'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { useFormDialog } from '@/hooks/useFormDialog'
+
+const AccountFormDialog = dynamic(() => import('@/components/accounts/AccountFormDialog').then((module) => module.AccountFormDialog), { ssr: false })
 
 export function AccountDetailsPage({ account, sites, emailIdentifiers }: { account: Account; sites: Site[]; emailIdentifiers: string[] }) {
   const router = useRouter()
@@ -30,7 +33,7 @@ export function AccountDetailsPage({ account, sites, emailIdentifiers }: { accou
   const [removeSite, setRemoveSite] = useState<string | null>(null)
   const [editNoteEntry, setEditNoteEntry] = useState<string | null>(null)
   const [editNoteValue, setEditNoteValue] = useState('')
-  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const editDialog = useFormDialog()
   const [isPending, startTransition] = useTransition()
   const siteNamesById = useMemo(() => new Map(sites.map((site) => [site.id, site.name])), [sites])
 
@@ -84,7 +87,7 @@ export function AccountDetailsPage({ account, sites, emailIdentifiers }: { accou
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setEditDialogOpen(true)} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={() => editDialog.show()} className="gap-1.5">
             <Pencil size={14} />
             编辑
           </Button>
@@ -190,16 +193,19 @@ export function AccountDetailsPage({ account, sites, emailIdentifiers }: { accou
         </CardContent>
       </Card>
 
-      <AccountFormDialog
-        open={editDialogOpen}
-        initialValue={account}
-        sites={sites}
-        emailIdentifiers={emailIdentifiers}
-        onClose={() => {
-          setEditDialogOpen(false)
-          router.refresh()
-        }}
-      />
+      {editDialog.hasOpened && (
+        <AccountFormDialog
+          open={editDialog.open}
+          onCloseAutoFocus={editDialog.onCloseAutoFocus}
+          initialValue={account}
+          sites={sites}
+          emailIdentifiers={emailIdentifiers}
+          onClose={(result) => {
+            editDialog.hide()
+            if (result?.saved) router.refresh()
+          }}
+        />
+      )}
 
       <AddSiteDialog
         open={addDialogOpen}

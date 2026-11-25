@@ -1,12 +1,12 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { PlusIcon, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 
 import { createAccountAction, updateAccountAction } from '@/app/actions/accounts'
-import { SiteFormDialog } from '@/components/sites/SiteFormDialog'
 import { SearchableSelect } from '@/components/searchable-select'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -16,11 +16,15 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { dedupeById } from '@/lib/utils'
-import { accountSchema, defaultAccountValues, isEmail } from '@/schemas/accountSchemas'
+import { isEmail } from '@/lib/utils/email'
+import { accountSchema, defaultAccountValues } from '@/schemas/accountSchemas'
 import { EMAIL_PROVIDER_LABELS, type Account, type AccountFormValues, type EmailProvider, type SiteEntry } from '@/types/account'
 import type { Site } from '@/types/site'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
+import { useFormDialog } from '@/hooks/useFormDialog'
+
+const SiteFormDialog = dynamic(() => import('@/components/sites/SiteFormDialog').then((module) => module.SiteFormDialog), { ssr: false })
 
 const EMAIL_PROVIDER_OPTIONS = Object.entries(EMAIL_PROVIDER_LABELS) as [EmailProvider, string][]
 
@@ -30,18 +34,35 @@ type AccountFormDialogProps = {
   sites: Site[]
   emailIdentifiers: string[]
   nested?: boolean
-  onClose: (createdAccount?: Account) => void
+  onCloseAutoFocus: (event: Event) => void
+  onClose: (result?: { saved: true; createdAccount?: Account }) => void
 }
 
-export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers, nested, onClose }: AccountFormDialogProps) {
+function getAccountFormValues(initialValue?: Account | null): AccountFormValues {
+  if (!initialValue) return defaultAccountValues
+
+  return {
+    identifier: initialValue.identifier,
+    email: initialValue.email,
+    emailProvider: initialValue.emailProvider,
+    emailProviderDetail: initialValue.emailProviderDetail,
+    sites: initialValue.sites,
+    passwordHint: initialValue.passwordHint,
+    vaultLocation: initialValue.vaultLocation,
+    description: initialValue.description,
+    isActive: initialValue.isActive,
+  }
+}
+
+export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers, nested, onClose, onCloseAutoFocus }: AccountFormDialogProps) {
   const [loading, setLoading] = useState(false)
-  const [siteDialogOpen, setSiteDialogOpen] = useState(false)
+  const siteDialog = useFormDialog()
   const [createdSites, setCreatedSites] = useState<Site[]>([])
-  const [emailDialogOpen, setEmailDialogOpen] = useState(false)
+  const emailDialog = useFormDialog()
   const [createdEmailIdentifiers, setCreatedEmailIdentifiers] = useState<string[]>([])
   const form = useForm<AccountFormValues>({
     resolver: zodResolver(accountSchema),
-    defaultValues: defaultAccountValues,
+    defaultValues: getAccountFormValues(initialValue),
   })
 
   useEffect(() => {
@@ -50,22 +71,7 @@ export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers,
     setCreatedSites([])
     setCreatedEmailIdentifiers([])
 
-    if (initialValue) {
-      form.reset({
-        identifier: initialValue.identifier,
-        email: initialValue.email,
-        emailProvider: initialValue.emailProvider,
-        emailProviderDetail: initialValue.emailProviderDetail,
-        sites: initialValue.sites,
-        passwordHint: initialValue.passwordHint,
-        vaultLocation: initialValue.vaultLocation,
-        description: initialValue.description,
-        isActive: initialValue.isActive,
-      })
-      return
-    }
-
-    form.reset(defaultAccountValues)
+    form.reset(getAccountFormValues(initialValue))
   }, [form, initialValue, open])
 
   const { register, handleSubmit, control, watch, formState: { errors } } = form
@@ -105,7 +111,7 @@ export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers,
       const result = await updateAccountAction(initialValue.id, finalValues)
       if (result.success) {
         toast.success('账号更新成功')
-        onClose()
+        onClose({ saved: true })
       } else {
         toast.error(result.error)
       }
@@ -113,7 +119,7 @@ export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers,
       const result = await createAccountAction(finalValues)
       if (result.success) {
         toast.success('账号添加成功')
-        onClose(result.data)
+        onClose({ saved: true, createdAccount: result.data })
       } else {
         toast.error(result.error)
       }
@@ -125,7 +131,7 @@ export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers,
   return (
     <>
     <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose() }}>
-      <DialogContent disableOutsideClose className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-lg">
+      <DialogContent disableOutsideClose onCloseAutoFocus={onCloseAutoFocus} className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{initialValue ? '编辑账号' : '添加账号'}</DialogTitle>
           <DialogDescription>维护可复用账号的基础信息和密码辅助信息。</DialogDescription>
@@ -172,7 +178,7 @@ export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers,
                       className="shrink-0 rounded-l-none border-l-0"
                       aria-label="快速新建邮箱账号"
                       title="快速新建邮箱账号"
-                      onClick={() => setEmailDialogOpen(true)}
+                      onClick={() => emailDialog.show()}
                     >
                       <PlusIcon />
                     </Button>
@@ -246,7 +252,7 @@ export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers,
                       className="shrink-0 rounded-l-none border-l-0"
                       aria-label="快速新建站点"
                       title="快速新建站点"
-                      onClick={() => setSiteDialogOpen(true)}
+                      onClick={() => siteDialog.show()}
                     >
                       <PlusIcon />
                     </Button>
@@ -315,25 +321,30 @@ export function AccountFormDialog({ open, initialValue, sites, emailIdentifiers,
         </form>
       </DialogContent>
     </Dialog>
-    <SiteFormDialog
-      open={siteDialogOpen}
-      onClose={(createdSite) => {
-        setSiteDialogOpen(false)
+    {siteDialog.hasOpened && (
+      <SiteFormDialog
+        open={siteDialog.open}
+        onCloseAutoFocus={siteDialog.onCloseAutoFocus}
+        onClose={(createdSite) => {
+          siteDialog.hide()
 
-        if (createdSite) {
-          setCreatedSites((prev) => (prev.some((site) => site.id === createdSite.id) ? prev : [...prev, createdSite]))
-          addSite(createdSite.id)
-        }
-      }}
-    />
-    {!nested && (
+          if (createdSite) {
+            setCreatedSites((prev) => (prev.some((site) => site.id === createdSite.id) ? prev : [...prev, createdSite]))
+            addSite(createdSite.id)
+          }
+        }}
+      />
+    )}
+    {!nested && emailDialog.hasOpened && (
       <AccountFormDialog
-        open={emailDialogOpen}
+        open={emailDialog.open}
+        onCloseAutoFocus={emailDialog.onCloseAutoFocus}
         sites={allSites}
         emailIdentifiers={allEmailIdentifiers}
         nested
-        onClose={(createdAccount) => {
-          setEmailDialogOpen(false)
+        onClose={(result) => {
+          emailDialog.hide()
+          const createdAccount = result?.createdAccount
 
           if (createdAccount && isEmail(createdAccount.identifier)) {
             setCreatedEmailIdentifiers((prev) => (prev.includes(createdAccount.identifier) ? prev : [...prev, createdAccount.identifier]))

@@ -8,12 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { EMAIL_PROVIDER_LABELS, type Account } from '@/types/account'
-import { isEmail } from '@/schemas/accountSchemas'
+import { isEmail } from '@/lib/utils/email'
 import type { Site } from '@/types/site'
 
 type AccountCardListProps = {
   accounts: Account[]
   sites: Site[]
+  pendingToggles: ReadonlySet<string>
   onToggleActive: (accountId: string, checked: boolean) => void
   onManageSites: (account: Account) => void
   onEdit: (account: Account) => void
@@ -21,7 +22,7 @@ type AccountCardListProps = {
   onClickCard: (accountId: string) => void
 }
 
-export function AccountCardList({ accounts, sites, onToggleActive, onManageSites, onEdit, onDelete, onClickCard }: AccountCardListProps) {
+export function AccountCardList({ accounts, sites, pendingToggles, onToggleActive, onManageSites, onEdit, onDelete, onClickCard }: AccountCardListProps) {
   const siteNamesById = useMemo(() => new Map(sites.map((site) => [site.id, site.name])), [sites])
 
   return (
@@ -44,6 +45,7 @@ export function AccountCardList({ accounts, sites, onToggleActive, onManageSites
             <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
               <Switch
                 checked={account.isActive}
+                disabled={pendingToggles.has(account.id)}
                 onCheckedChange={(checked) => onToggleActive(account.id, checked)}
                 className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
               />

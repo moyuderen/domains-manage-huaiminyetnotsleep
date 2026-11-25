@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 
+import dynamic from 'next/dynamic'
 import { Globe, LayoutGrid, List, Pencil, Plus, RefreshCw, Search, Star, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState, useTransition } from 'react'
 
@@ -25,8 +26,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import type { Site } from '@/types/site'
+import { useFormDialog } from '@/hooks/useFormDialog'
 
-import { SiteFormDialog } from './SiteFormDialog'
+const SiteFormDialog = dynamic(() => import('@/components/sites/SiteFormDialog').then((module) => module.SiteFormDialog), { ssr: false })
+
 
 type SitesPageClientProps = {
   initialSites: Site[]
@@ -40,7 +43,7 @@ const UNCATEGORIZED_LABEL = '未分类'
 
 export function SitesPageClient({ initialSites, total, initialFavorites }: SitesPageClientProps) {
   const [sites, setSites] = useState(initialSites)
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const siteDialog = useFormDialog()
   const [editingSite, setEditingSite] = useState<Site | null>(null)
   const [deletingSite, setDeletingSite] = useState<Site | null>(null)
   const [keyword, setKeyword] = useState('')
@@ -117,7 +120,7 @@ export function SitesPageClient({ initialSites, total, initialFavorites }: Sites
   }
 
   const handleFormClose = (createdSite?: Site) => {
-    setDialogOpen(false)
+    siteDialog.hide()
     setEditingSite(null)
     if (createdSite) {
       setSites((prev) => {
@@ -251,7 +254,7 @@ export function SitesPageClient({ initialSites, total, initialFavorites }: Sites
                   <p>刷新</p>
                 </TooltipContent>
               </Tooltip>
-              <Button onClick={() => { setEditingSite(null); setDialogOpen(true) }}>
+              <Button onClick={() => { setEditingSite(null); siteDialog.show() }}>
                 <Plus data-icon="inline-start" />
                 添加站点
               </Button>
@@ -266,7 +269,7 @@ export function SitesPageClient({ initialSites, total, initialFavorites }: Sites
                   icon={<LayoutGrid className="size-6 text-muted-foreground/60" />}
                   title="暂无站点数据"
                   description="先添加注册站点或 DNS 站点，后续可在域名与账号管理中直接关联使用。"
-                  action={<Button onClick={() => { setEditingSite(null); setDialogOpen(true) }}>添加站点</Button>}
+                  action={<Button onClick={() => { setEditingSite(null); siteDialog.show() }}>添加站点</Button>}
                   fillHeight
                   className="h-full"
                 />
@@ -352,7 +355,7 @@ export function SitesPageClient({ initialSites, total, initialFavorites }: Sites
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  onClick={() => { setEditingSite(site); setDialogOpen(true) }}
+                                  onClick={() => { setEditingSite(site); siteDialog.show() }}
                                 >
                                   <Pencil size={14} />
                                 </Button>
@@ -383,19 +386,22 @@ export function SitesPageClient({ initialSites, total, initialFavorites }: Sites
                 favoriteIds={favoriteIds}
                 onToggleFavorite={handleToggleFavorite}
                 onReorderFavorites={handleReorderFavorites}
-                onEdit={(site) => { setEditingSite(site); setDialogOpen(true) }}
+                onEdit={(site) => { setEditingSite(site); siteDialog.show() }}
                 onDelete={setDeletingSite}
-                onAdd={() => { setEditingSite(null); setDialogOpen(true) }}
+                onAdd={() => { setEditingSite(null); siteDialog.show() }}
               />
             </TabsContent>
           </Tabs>
         </div>
 
-        <SiteFormDialog
-          open={dialogOpen}
-          initialValue={editingSite}
-          onClose={(createdSite) => handleFormClose(createdSite)}
-        />
+        {siteDialog.hasOpened && (
+          <SiteFormDialog
+            open={siteDialog.open}
+            onCloseAutoFocus={siteDialog.onCloseAutoFocus}
+            initialValue={editingSite}
+            onClose={(createdSite) => handleFormClose(createdSite)}
+          />
+        )}
 
         <ConfirmDialog
           open={Boolean(deletingSite)}
